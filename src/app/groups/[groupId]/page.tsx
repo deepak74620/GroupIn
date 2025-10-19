@@ -152,10 +152,22 @@ export default function GroupPage() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  api.message.getAllByGroupId.useQuery(
+  
+  // --- THIS IS THE FIX ---
+  // 1. Fetch the initial messages and store the result in a variable
+  const { data: initialMessages } = api.message.getAllByGroupId.useQuery(
     { groupId },
-    { enabled: !!groupId, onSuccess: setMessages }
+    { enabled: !!groupId } // We removed the `onSuccess` callback here
   );
+
+  // 2. Use a useEffect hook to update the state when the initial data is fetched
+  useEffect(() => {
+    if (initialMessages) {
+      setMessages(initialMessages);
+    }
+  }, [initialMessages]);
+  
+  // The rest of the hooks are unchanged
   const sendMessage = api.message.send.useMutation({
     onSuccess: () => setNewMessage(""),
   });
@@ -175,11 +187,10 @@ export default function GroupPage() {
     },
   });
 
-  // --- NEW: STATE AND HOOKS FOR INVITES ---
+  // --- STATE AND HOOKS FOR INVITES ---
   const [inviteLink, setInviteLink] = useState("");
   const createInviteLink = api.group.createInvite.useMutation({
     onSuccess: (data) => {
-      // Construct the full URL using the window's origin
       const url = `${window.location.origin}/invite/${data.id}`;
       setInviteLink(url);
     }
@@ -189,13 +200,16 @@ export default function GroupPage() {
   const { data: group, isLoading, error } = api.group.getById.useQuery({ id: groupId });
   const isMember = group?.members.some(member => member.id === sessionData?.user.id);
 
-  // --- SIDE EFFECTS (UNCHANGED) ---
+  // --- SIDE EFFECTS (Pusher and scroll effects) ---
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
   useEffect(() => {
     if (!groupId) return;
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER! });
     const channel = pusher.subscribe(`group-${groupId}`);
-    channel.bind("new-message", (newMessage: Message) => { setMessages((prev) => [...prev, newMessage]); });
+    channel.bind("new-message", (newMessage: Message) => {
+      // This part is crucial: we use a function to update state to avoid stale closures
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    });
     return () => { pusher.unsubscribe(`group-${groupId}`); };
   }, [groupId]);
 
@@ -206,7 +220,6 @@ export default function GroupPage() {
       sendMessage.mutate({ groupId, content: newMessage.trim() });
     }
   };
-
   const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
     if (eventName.trim() && eventDate) {
@@ -217,8 +230,6 @@ export default function GroupPage() {
       });
     }
   };
-
-  // --- NEW: HANDLER FOR INVITE GENERATION ---
   const handleGenerateInvite = () => {
     createInviteLink.mutate({ groupId });
   };
@@ -233,7 +244,8 @@ export default function GroupPage() {
         <h1 className="text-5xl font-extrabold tracking-tight"><span className="text-[hsl(280,100%,70%)]">{group.name}</span></h1>
 
         {isMember ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl mt-8">
+            // ... (The rest of the JSX is exactly the same as before)
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl mt-8">
             {/* CHAT AREA (Column 1) */}
             <div className="flex h-[60vh] flex-col rounded-xl bg-white/10 p-4">
               <h2 className="text-2xl font-bold mb-4">Group Chat</h2>
@@ -280,8 +292,7 @@ export default function GroupPage() {
         )}
 
         <div className="mt-8 flex w-full max-w-5xl justify-center items-start gap-8">
-            {/* NEW: INVITE MEMBERS SECTION */}
-            {/* This block will only render if the current user is the group's creator */}
+            {/* INVITE MEMBERS SECTION */}
             {group.createdById === sessionData?.user.id && (
               <div className="flex flex-col items-center gap-4 rounded-xl bg-white/10 p-4 w-full max-w-xs">
                 <h3 className="text-xl font-bold">Invite Members</h3>
@@ -313,7 +324,6 @@ export default function GroupPage() {
             Back to All Groups
           </Link>
         </div>
-
       </div>
     </main>
   );
