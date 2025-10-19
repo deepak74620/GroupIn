@@ -1,6 +1,5 @@
  // src/server/api/root.ts
 
-    import { group } from "console";
 import { groupRouter } from "~/server/api/routers/group"; // 1. Import it
     // import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 

@@ -128,66 +128,44 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+// FIX 1: Import the Next.js Image component
+import Image from "next/image";
 import Pusher from "pusher-js";
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
 
-// Define a type for our message object for better type safety
-type Message = {
-  id: string;
-  content: string;
-  createdAt: Date;
-  author: {
-    id: string;
-    name: string | null;
-    image: string | null;
-  };
-};
+// (Type definitions are unchanged)
+import { type AppRouter } from "~/server/api/root";
+import { type inferRouterOutputs } from "@trpc/server";
+type RouterOutput = inferRouterOutputs<AppRouter>;
+type Message = RouterOutput["message"]["getAllByGroupId"][number];
+
 
 export default function GroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { data: sessionData } = useSession();
-
-  // --- STATE AND HOOKS FOR CHAT ---
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const { data: initialMessages } = api.message.getAllByGroupId.useQuery({ groupId }, { enabled: !!groupId });
+  useEffect(() => { if (initialMessages) { setMessages(initialMessages); } }, [initialMessages]);
   
-  // --- THIS IS THE FIX ---
-  // 1. Fetch the initial messages and store the result in a variable
-  const { data: initialMessages } = api.message.getAllByGroupId.useQuery(
-    { groupId },
-    { enabled: !!groupId } // We removed the `onSuccess` callback here
-  );
-
-  // 2. Use a useEffect hook to update the state when the initial data is fetched
-  useEffect(() => {
-    if (initialMessages) {
-      setMessages(initialMessages);
-    }
-  }, [initialMessages]);
-  
-  // The rest of the hooks are unchanged
   const sendMessage = api.message.send.useMutation({
     onSuccess: () => setNewMessage(""),
   });
-
-  // --- STATE AND HOOKS FOR EVENTS ---
+  
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
-  const { data: events, refetch: refetchEvents } = api.event.getAllByGroupId.useQuery(
-    { groupId },
-    { enabled: !!groupId }
-  );
+  const { data: events, refetch: refetchEvents } = api.event.getAllByGroupId.useQuery({ groupId }, { enabled: !!groupId });
   const createEvent = api.event.create.useMutation({
     onSuccess: () => {
-      refetchEvents();
+      // FIX 2: Add 'void' to the Promise-returning function
+      void refetchEvents();
       setEventName("");
       setEventDate("");
     },
   });
 
-  // --- STATE AND HOOKS FOR INVITES ---
   const [inviteLink, setInviteLink] = useState("");
   const createInviteLink = api.group.createInvite.useMutation({
     onSuccess: (data) => {
@@ -196,45 +174,24 @@ export default function GroupPage() {
     }
   });
 
-  // --- DATA FETCHING FOR THE GROUP ITSELF ---
   const { data: group, isLoading, error } = api.group.getById.useQuery({ id: groupId });
   const isMember = group?.members.some(member => member.id === sessionData?.user.id);
-
-  // --- SIDE EFFECTS (Pusher and scroll effects) ---
+  
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
   useEffect(() => {
     if (!groupId) return;
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, { cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER! });
     const channel = pusher.subscribe(`group-${groupId}`);
     channel.bind("new-message", (newMessage: Message) => {
-      // This part is crucial: we use a function to update state to avoid stale closures
       setMessages((prevMessages) => [...prevMessages, newMessage]);
     });
     return () => { pusher.unsubscribe(`group-${groupId}`); };
   }, [groupId]);
 
-  // --- EVENT HANDLERS ---
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newMessage.trim()) {
-      sendMessage.mutate({ groupId, content: newMessage.trim() });
-    }
-  };
-  const handleCreateEvent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (eventName.trim() && eventDate) {
-      createEvent.mutate({
-        groupId,
-        name: eventName.trim(),
-        date: new Date(eventDate),
-      });
-    }
-  };
-  const handleGenerateInvite = () => {
-    createInviteLink.mutate({ groupId });
-  };
-
-  // --- RENDER LOGIC ---
+  const handleSendMessage = (e: React.FormEvent) => { /* ... unchanged ... */ e.preventDefault(); if (newMessage.trim()) { sendMessage.mutate({ groupId, content: newMessage.trim() }); } };
+  const handleCreateEvent = (e: React.FormEvent) => { /* ... unchanged ... */ e.preventDefault(); if (eventName.trim() && eventDate) { createEvent.mutate({ groupId, name: eventName.trim(), date: new Date(eventDate), }); } };
+  const handleGenerateInvite = () => { /* ... unchanged ... */ createInviteLink.mutate({ groupId }); };
+  
   if (isLoading) return <div className="flex justify-center items-center h-screen text-white">Loading...</div>;
   if (error || !group) return <div className="flex justify-center items-center h-screen text-white">Group not found.</div>;
 
@@ -244,15 +201,14 @@ export default function GroupPage() {
         <h1 className="text-5xl font-extrabold tracking-tight"><span className="text-[hsl(280,100%,70%)]">{group.name}</span></h1>
 
         {isMember ? (
-            // ... (The rest of the JSX is exactly the same as before)
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl mt-8">
-            {/* CHAT AREA (Column 1) */}
             <div className="flex h-[60vh] flex-col rounded-xl bg-white/10 p-4">
               <h2 className="text-2xl font-bold mb-4">Group Chat</h2>
               <div className="flex-grow space-y-4 overflow-y-auto pr-2">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex items-start gap-3 ${msg.author.id === sessionData?.user.id ? 'flex-row-reverse' : ''}`}>
-                    <img src={msg.author.image ?? ''} alt={msg.author.name ?? ''} className="h-10 w-10 rounded-full" />
+                    {/* FIX 3: Replace <img> with <Image /> */}
+                    <Image src={msg.author.image ?? ''} alt={msg.author.name ?? 'Avatar'} className="h-10 w-10 rounded-full" width={40} height={40}/>
                     <div className={`rounded-lg px-4 py-2 ${msg.author.id === sessionData?.user.id ? 'bg-blue-600' : 'bg-gray-700'}`}>
                       <p className="font-semibold">{msg.author.name}</p>
                       <p>{msg.content}</p>
@@ -266,8 +222,7 @@ export default function GroupPage() {
                 <button type="submit" disabled={sendMessage.isPending} className="rounded-full bg-blue-600 px-6 py-2 font-semibold transition hover:bg-blue-700 disabled:opacity-50">Send</button>
               </form>
             </div>
-
-            {/* EVENTS AREA (Column 2) */}
+            {/* The rest of the JSX is unchanged... */}
             <div className="flex h-[60vh] flex-col rounded-xl bg-white/10 p-4">
               <h2 className="text-2xl font-bold mb-4">Group Events</h2>
               <div className="flex-grow space-y-4 overflow-y-auto pr-2">
@@ -290,35 +245,22 @@ export default function GroupPage() {
         ) : (
           <p className="mt-8 text-xl">You must be a member of this group to view its content.</p>
         )}
-
         <div className="mt-8 flex w-full max-w-5xl justify-center items-start gap-8">
-            {/* INVITE MEMBERS SECTION */}
             {group.createdById === sessionData?.user.id && (
               <div className="flex flex-col items-center gap-4 rounded-xl bg-white/10 p-4 w-full max-w-xs">
                 <h3 className="text-xl font-bold">Invite Members</h3>
-                <button
-                  onClick={handleGenerateInvite}
-                  disabled={createInviteLink.isPending}
-                  className="rounded-full bg-blue-600 px-6 py-2 font-semibold transition hover:bg-blue-700 disabled:opacity-50"
-                >
+                <button onClick={handleGenerateInvite} disabled={createInviteLink.isPending} className="rounded-full bg-blue-600 px-6 py-2 font-semibold transition hover:bg-blue-700 disabled:opacity-50">
                   {createInviteLink.isPending ? "Generating..." : "Generate Invite Link"}
                 </button>
                 {inviteLink && (
                   <div className="w-full text-center">
                     <p className="font-semibold">Share this link:</p>
-                    <input
-                      type="text"
-                      readOnly
-                      value={inviteLink}
-                      className="mt-2 w-full rounded bg-white/20 p-2 text-center text-white"
-                      onFocus={(e) => e.target.select()}
-                    />
+                    <input type="text" readOnly value={inviteLink} className="mt-2 w-full rounded bg-white/20 p-2 text-center text-white" onFocus={(e) => e.target.select()} />
                   </div>
                 )}
               </div>
             )}
         </div>
-
         <div className="mt-8">
           <Link href="/" className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20">
             Back to All Groups

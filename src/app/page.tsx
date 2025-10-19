@@ -49,7 +49,7 @@ export default function Home() {
     if (state === "Join Group") {
       joinGroup.mutate({ groupId: group.id });
     } else if (state === "Leave Group") {
-      leaveGroup.mutate({ groupId: group.id });
+      void leaveGroup.mutate({ groupId: group.id });
     }
   };
 
