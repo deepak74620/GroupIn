@@ -14,6 +14,44 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
+
+model Event {
+      id          String   @id @default(cuid())
+      name        String
+      description String? // Optional description
+      date        DateTime // The date and time of the event
+      createdAt   DateTime @default(now())
+      updatedAt   DateTime @updatedAt
+
+      // Relations
+      groupId     String
+      group       Group    @relation(fields: [groupId], references: [id])
+      createdById String
+      createdBy   User     @relation(fields: [createdById], references: [id])
+    }
+
+model Message {
+      id        String   @id @default(cuid())
+      content   String
+      createdAt DateTime @default(now())
+
+      // Relations
+      authorId  String
+      author    User     @relation(fields: [authorId], references: [id])
+      groupId   String
+      group     Group    @relation(fields: [groupId], references: [id])
+    }
+
+model GroupInvite {
+      id        String   @id @default(cuid()) // This unique ID will be our invite code
+      createdAt DateTime @default(now())
+
+      // Relations
+      groupId   String
+      group     Group    @relation(fields: [groupId], references: [id])
+    }
+
+
 // Add this new model
     model Group {
       id        String   @id @default(cuid())
@@ -23,7 +61,14 @@ datasource db {
 
       // Relation Fields
       createdById String
-      createdBy   User   @relation(fields: [createdById], references: [id])
+      createdBy   User   @relation("CreatedGroups", fields: [createdById], references: [id])
+
+      messages  Message[] // Add this line to link to messages
+      invites   GroupInvite[] // Add relation from Group to its invites
+      events    Event[]   // Add this line to link a Group to its Events
+
+      // 1. Add this line: The list of users that are members of this group
+      members   User[] @relation("GroupMembers")
     }
 
 model Post {
@@ -76,8 +121,15 @@ model User {
     sessions      Session[]
     posts         Post[]
 
-    // Add this line to connect the user to the groups they create
-    groups        Group[]
+    groupsCreated Group[] @relation("CreatedGroups") // Rename to be explicit
+      
+      messages      Message[] // Add this line to link to messages
+      eventsCreated Event[]   // Add this line to link a User to the Events they create
+
+      // 2. Add this line: The list of groups this user is a member of
+      memberOf      Group[] @relation("GroupMembers")
+
+      
 }
 
 model VerificationToken {

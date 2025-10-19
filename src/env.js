@@ -17,6 +17,18 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+
+
+
+      
+        GITHUB_CLIENT_ID: z.string(),
+        GITHUB_CLIENT_SECRET: z.string(),
+
+        // --- ADD THESE FOUR LINES ---
+        PUSHER_APP_ID: z.string(),
+        PUSHER_KEY: z.string(),
+        PUSHER_SECRET: z.string(),
+        PUSHER_CLUSTER: z.string(),
   },
 
   /**
@@ -26,6 +38,9 @@ export const env = createEnv({
    */
   client: {
     // NEXT_PUBLIC_CLIENTVAR: z.string(),
+    // --- AND ADD THESE TWO LINES ---
+        NEXT_PUBLIC_PUSHER_KEY: z.string(),
+        NEXT_PUBLIC_PUSHER_CLUSTER: z.string()
   },
 
   /**
@@ -38,6 +53,18 @@ export const env = createEnv({
     AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+
+
+    GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+        GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
+
+        // --- AND ADD ALL SIX OF YOUR NEW VARIABLES HERE ---
+        PUSHER_APP_ID: process.env.PUSHER_APP_ID,
+        PUSHER_KEY: process.env.PUSHER_KEY,
+        PUSHER_SECRET: process.env.PUSHER_SECRET,
+        PUSHER_CLUSTER: process.env.PUSHER_CLUSTER,
+        NEXT_PUBLIC_PUSHER_KEY: process.env.NEXT_PUBLIC_PUSHER_KEY,
+        NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
