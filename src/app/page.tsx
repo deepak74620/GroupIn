@@ -5,9 +5,6 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
 
-// --- THIS IS THE FIX (PART 1) ---
-// We are creating an explicit type for a single group object returned by our API.
-// This makes our component's types robust and not dependent on the query's loading state.
 import { type AppRouter } from "~/server/api/root";
 import { type inferRouterOutputs } from "@trpc/server";
 type RouterOutput = inferRouterOutputs<AppRouter>;
@@ -20,7 +17,11 @@ export default function Home() {
   const [newGroupName, setNewGroupName] = useState("");
   const { data: groups, refetch: refetchGroups, isLoading } = api.group.getAll.useQuery();
 
-  const createGroup = api.group.create.useMutation({ onSuccess: () => { refetchGroups(); setNewGroupName(""); } });
+  const createGroup = api.group.create.useMutation({ onSuccess: () => { 
+    // Add void here as well for best practice
+    void refetchGroups(); 
+    setNewGroupName(""); 
+  }});
   const joinGroup = api.group.join.useMutation({ onSuccess: () => refetchGroups() });
   const leaveGroup = api.group.leave.useMutation({ onSuccess: () => refetchGroups() });
 
@@ -29,25 +30,21 @@ export default function Home() {
       createGroup.mutate({ name: newGroupName.trim() });
     }
   }
-
-  // --- THIS IS THE FIX (PART 2) ---
-  // We use our new, explicit `GroupWithMembers` type for the 'group' parameter.
+  
   const getButtonState = (group: GroupWithMembers) => {
     if (!userId) return "Sign in to Join";
-    
     const isMember = group.members.some(member => member.id === userId);
     const isCreator = group.createdById === userId;
-
     if (isCreator) return "My Group (Creator)";
     if (isMember) return "Leave Group";
     return "Join Group";
   };
 
-  // --- THIS IS THE FIX (PART 3) ---
-  // We apply the same explicit type here for consistency and safety.
+  // --- THIS IS THE FIX ---
+  // The 'mutate' functions return promises. We must add `void` to them.
   const handleGroupAction = (group: GroupWithMembers, state: string) => {
     if (state === "Join Group") {
-      joinGroup.mutate({ groupId: group.id });
+      void joinGroup.mutate({ groupId: group.id });
     } else if (state === "Leave Group") {
       void leaveGroup.mutate({ groupId: group.id });
     }
@@ -94,7 +91,6 @@ export default function Home() {
             
             {groups?.map((group) => {
               const buttonState = getButtonState(group);
-
               return (
                 <div key={group.id} className="rounded-xl bg-white/10 p-4 flex justify-between items-center">
                   <Link href={`/groups/${group.id}`} className="flex-grow hover:opacity-80 transition-opacity">
@@ -106,16 +102,13 @@ export default function Home() {
                       </p>
                     </div>
                   </Link>
-                  
                   <button
                     onClick={() => handleGroupAction(group, buttonState)}
                     disabled={buttonState === "Sign in to Join" || buttonState === "My Group (Creator)" || joinGroup.isPending || leaveGroup.isPending}
                     className={`rounded-full px-4 py-2 font-semibold no-underline transition disabled:opacity-50 ${
-                      buttonState === "Join Group"
-                        ? "bg-green-500 hover:bg-green-600"
-                        : buttonState === "Leave Group"
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-gray-500 cursor-not-allowed"
+                      buttonState === "Join Group" ? "bg-green-500 hover:bg-green-600" :
+                      buttonState === "Leave Group" ? "bg-red-500 hover:bg-red-600" :
+                      "bg-gray-500 cursor-not-allowed"
                     }`}
                   >
                     {buttonState}
