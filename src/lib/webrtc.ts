@@ -226,7 +226,7 @@ export class WebRTCManager {
 
   // Helper to create a new peer
   private createPeer(targetId: string, initiator: boolean): Peer.Instance {
-    const peer: Peer.Instance = new Peer({
+    const peer = new Peer({
       initiator,
       config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] },
       stream: this.localStream ?? undefined,
