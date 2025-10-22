@@ -17,6 +17,21 @@ import { z } from "zod";
           });
         }),
 
+       // --- NEW PROCEDURE ---
+      getById: protectedProcedure
+        .input(z.object({ eventId: z.string() }))
+        .query(async ({ ctx, input }) => {
+          const event = await ctx.db.event.findUnique({
+            where: { id: input.eventId },
+            include: {
+              createdBy: { select: { id: true, name: true } },
+              group: { select: { name: true, id: true } },
+            },
+          });
+          if (!event) throw new Error("Event not found");
+          return event;
+        }),
+
       // Mutation to create a new event
       create: protectedProcedure
         .input(

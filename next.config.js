@@ -4,7 +4,24 @@
  */
 import "./src/env.js";
 
+// /** @type {import("next").NextConfig} */
+// const config = {};
+
 /** @type {import("next").NextConfig} */
-const config = {};
+    const config = {
+      // --- ADD THIS 'images' BLOCK ---
+      images: {
+        remotePatterns: [
+          {
+            protocol: 'https',
+            hostname: 'avatars.githubusercontent.com',
+            port: '',
+            pathname: '/**',
+          },
+        ],
+      },
+    };
+
+    // export default config;
 
 export default config;

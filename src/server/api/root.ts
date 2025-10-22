@@ -10,6 +10,7 @@ import { groupRouter } from "~/server/api/routers/group"; // 1. Import it
     // export type AppRouter = typeof appRouter;
     // export const createCaller = createCallerFactory(appRouter);
 
+import { webrtcRouter } from "./routers/webrtc"; // 1. Import
 import { messageRouter } from "~/server/api/routers/message"; // 1. Import
 import { eventRouter } from "~/server/api/routers/event"; // 1. Import
 import { postRouter } from "~/server/api/routers/post";
@@ -25,6 +26,7 @@ export const appRouter = createTRPCRouter({
   group: groupRouter,
   message: messageRouter, // 2. Add
   event: eventRouter, // 2. Add
+  webrtc: webrtcRouter, // 2. Add
 });
 
 // export type definition of API

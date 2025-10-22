@@ -15,6 +15,23 @@ datasource db {
 }
 
 
+ // --- NEW EXPLICIT JUNCTION MODEL ---
+    model MembersOnGroups {
+      // Relations to User and Group
+      user    User   @relation(fields: [userId], references: [id])
+      userId  String
+      group   Group  @relation(fields: [groupId], references: [id])
+      groupId String
+
+      // --- The new field for our relationship ---
+      isAdmin   Boolean  @default(false)
+      assignedAt DateTime @default(now())
+
+      // Make the combination of userId and groupId the unique primary key
+      @@id([userId, groupId])
+    }
+
+
 model Event {
       id          String   @id @default(cuid())
       name        String
@@ -68,7 +85,9 @@ model GroupInvite {
       events    Event[]   // Add this line to link a Group to its Events
 
       // 1. Add this line: The list of users that are members of this group
-      members   User[] @relation("GroupMembers")
+      // members   User[] @relation("GroupMembers")
+      // Update this line to point to the new model
+      members     MembersOnGroups[]
     }
 
 model Post {
@@ -126,8 +145,9 @@ model User {
       messages      Message[] // Add this line to link to messages
       eventsCreated Event[]   // Add this line to link a User to the Events they create
 
-      // 2. Add this line: The list of groups this user is a member of
-      memberOf      Group[] @relation("GroupMembers")
+      
+      // Update this line to point to the new model
+      memberOf      MembersOnGroups[]
 
       
 }
