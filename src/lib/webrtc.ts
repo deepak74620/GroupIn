@@ -136,7 +136,6 @@ import { type UseTRPCMutationResult } from '@trpc/react-query/shared';
 import { type AppRouter } from '~/server/api/root';
 import { type inferRouterOutputs } from '@trpc/server';
 
-
 // Define proper types for WebRTC signals
 interface WebRTCSignal {
   type: string;
@@ -173,13 +172,13 @@ export class WebRTCManager {
   }
 
   // Called by the streamer to start sharing
-  public async start(stream: MediaStream) {
+  public async start(stream: MediaStream): Promise<void> {
     this.localStream = stream;
     this.sendSignal({ groupId: this.groupId, signal: { type: 'iamstreamer' } });
   }
 
   // The main entry point for handling signals from Pusher
-  public handleSignal(senderId: string, signal: WebRTCSignal) {
+  public handleSignal(senderId: string, signal: WebRTCSignal): void {
     if (senderId === this.userId) return;
 
     const { type, offer, answer } = signal;
@@ -227,7 +226,7 @@ export class WebRTCManager {
 
   // Helper to create a new peer
   private createPeer(targetId: string, initiator: boolean): Peer.Instance {
-    const peer = new Peer({
+    const peer: Peer.Instance = new Peer({
       initiator,
       config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] },
       stream: this.localStream ?? undefined,
@@ -235,14 +234,15 @@ export class WebRTCManager {
     });
 
     peer.on('signal', (signalData: Peer.SignalData) => {
-      const type = initiator ? 'offer' : 'answer';
+      const signalType = initiator ? 'offer' : 'answer';
+      const signalPayload: WebRTCSignal = {
+        type: signalType,
+        [signalType]: signalData,
+        targetId,
+      };
       this.sendSignal({
         groupId: this.groupId,
-        signal: { 
-          type, 
-          [type]: signalData, 
-          targetId 
-        } as WebRTCSignal,
+        signal: signalPayload,
       });
     });
 
@@ -263,15 +263,19 @@ export class WebRTCManager {
   }
 
   // Cleanup method
-  public destroy() {
+  public destroy(): void {
     if (this.localStream) {
       this.sendSignal({ 
         groupId: this.groupId, 
         signal: { type: 'streamend' } 
       });
     }
-    this.localStream?.getTracks().forEach((track) => track.stop());
-    this.peers.forEach((peer) => peer.destroy());
+    this.localStream?.getTracks().forEach((track) => {
+      track.stop();
+    });
+    this.peers.forEach((peer) => {
+      peer.destroy();
+    });
     this.peers.clear();
   }
 }

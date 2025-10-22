@@ -3343,7 +3343,7 @@ export default function EventPage() {
   }, [event, sessionData?.user.id, groupId, sendSignalMutation, isStreaming, streamerId]);
 
   const currentUserMembership = group?.members.find(m => m.userId === sessionData?.user.id);
-  const canStream = !isStreaming && (currentUserMembership?.isAdmin || group?.createdById === sessionData?.user.id);
+  const canStream = !isStreaming && ((currentUserMembership?.isAdmin) ?? (group?.createdById === sessionData?.user.id));
   const amIStreamer = isStreaming && streamerId === sessionData?.user.id;
   const amIViewer = isStreaming && streamerId !== sessionData?.user.id;
 
