@@ -40,6 +40,10 @@ model Event {
       createdAt   DateTime @default(now())
       updatedAt   DateTime @updatedAt
 
+      // --- ADD THIS FIELD ---
+      // This will hold the ID of the user currently streaming
+      streamerId  String?
+
       // Relations
       groupId     String
       group       Group    @relation(fields: [groupId], references: [id])
