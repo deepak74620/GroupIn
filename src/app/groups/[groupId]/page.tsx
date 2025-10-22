@@ -14,7 +14,10 @@ import { type AppRouter } from "~/server/api/root";
 import { type inferRouterOutputs } from "@trpc/server";
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type Message = RouterOutput["message"]["getAllByGroupId"][number];
-type Member = RouterOutput["group"]["getById"]["members"][number];
+// --- THIS IS THE FIX ---
+// We wrap the return type of 'getById' in NonNullable
+// This tells TypeScript: "Assume this is not null for the purpose of creating this type"
+type Member = NonNullable<RouterOutput["group"]["getById"]>["members"][number];
 
 
 export default function GroupPage() {
