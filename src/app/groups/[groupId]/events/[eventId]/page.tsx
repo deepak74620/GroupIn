@@ -2985,6 +2985,7 @@ import { api } from "~/trpc/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import Peer from "simple-peer";
 import Pusher from "pusher-js";
+import type { Channel } from "pusher-js"; // ADD THIS IMPORT
 
 // Define proper types for WebRTC signals
 interface WebRTCSignal {
@@ -3011,6 +3012,7 @@ export default function EventPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamerId, setStreamerId] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const channelRef = useRef<Channel | null>(null); // FIXED: Use Channel type instead of Pusher.Channel
   
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const peerVideoRef = useRef<HTMLVideoElement>(null);
