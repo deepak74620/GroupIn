@@ -3012,7 +3012,7 @@ export default function EventPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamerId, setStreamerId] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
-  const channelRef = useRef<Channel | null>(null); // FIXED: Use Channel type instead of Pusher.Channel
+  
   
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const peerVideoRef = useRef<HTMLVideoElement>(null);
@@ -3020,7 +3020,7 @@ export default function EventPage() {
   const localStreamRef = useRef<MediaStream | null>(null);
   const hasProcessedLateJoinRef = useRef(false);
   const pusherRef = useRef<Pusher | null>(null);
-  const channelRef = useRef<Pusher.Channel | null>(null);
+  const channelRef = useRef<Channel | null>(null); // FIXED: Use Channel type instead of Pusher.Channel
 
   const sendSignalMutation = api.webrtc.sendSignal.useMutation();
   const setStreamerMutation = api.event.setStreamer.useMutation();
